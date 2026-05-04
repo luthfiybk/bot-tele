@@ -69,7 +69,7 @@ class DynamicConfig:
         return vouchers[0]["key"] if vouchers else None
 
     def add_user_voucher(self, user_id: int, value: str, initial_balance: int = 0):
-        """Add a new voucher to the user's pool."""
+        """Add a new voucher to the front of the pool (priority for next search)."""
         user_id_str = str(user_id)
         if "user_vouchers" not in self.data:
             self.data["user_vouchers"] = {}
@@ -78,8 +78,20 @@ class DynamicConfig:
         
         # Prevent duplicates
         if not any(v["key"] == value for v in current_vouchers):
-            current_vouchers.append({"key": value, "balance": initial_balance})
+            # Set balance to -1 if it's 0 to signify it's "New" and needs rotation after use
+            bal = initial_balance if initial_balance > 0 else -1
+            current_vouchers.insert(0, {"key": value, "balance": bal})
             self.data["user_vouchers"][user_id_str] = current_vouchers
+            self.save()
+
+    def rotate_voucher_to_back(self, user_id: int):
+        """Move the current (first) voucher to the end of the pool."""
+        user_id_str = str(user_id)
+        vouchers = self.get_user_vouchers(user_id)
+        if len(vouchers) > 1:
+            v = vouchers.pop(0)
+            vouchers.append(v)
+            self.data["user_vouchers"][user_id_str] = vouchers
             self.save()
 
     def update_voucher_balance(self, user_id: int, key: str, balance: int):

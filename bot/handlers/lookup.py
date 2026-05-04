@@ -242,11 +242,19 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
     if result.success:
         # If using a user voucher, update its balance in the pool
         if active_user_voucher and active_key == active_user_voucher:
+            # Check if this was a "New" voucher (-1 balance)
+            user_vouchers = dynamic_config.get_user_vouchers(user_id)
+            is_new = user_vouchers and user_vouchers[0].get("balance") == -1
+            
             dynamic_config.update_voucher_balance(user_id, active_key, result.remaining_tokens)
-            # Recalculate total balance after update
             total_balance = dynamic_config.get_total_balance(user_id)
             
-            # If tokens are 0, move to next voucher in pool
+            # If it was a new voucher, rotate it to the back so we continue with the previous active one
+            if is_new and len(user_vouchers) > 1:
+                dynamic_config.rotate_voucher_to_back(user_id)
+                logger.info(f"New voucher {user_id} checked and rotated to back.")
+            
+            # If tokens are 0, move to next voucher in pool (remove it)
             if result.remaining_tokens == 0:
                 dynamic_config.remove_first_user_voucher(user_id)
                 logger.info(f"Voucher empty for user {user_id}, automatically removed.")
