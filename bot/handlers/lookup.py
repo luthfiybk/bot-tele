@@ -15,7 +15,7 @@ from bot.services.utils import escape_markdown as _escape_md
 logger = logging.getLogger(__name__)
 
 
-def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str:
+def _format_result(result: MultiSourceResponse, from_cache: bool = False, total_balance: int = None) -> str:
     """Format MultiSource result into a nice Telegram message with separators."""
     if result.error or not result.success:
         return (
@@ -78,7 +78,10 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
 
     # Token info - Only show if NOT from cache to avoid confusion
     if not from_cache:
-        lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}`")
+        if total_balance is not None and total_balance > result.remaining_tokens:
+            lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}` \\(Total Pool: `{total_balance}`\\)")
+        else:
+            lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}`")
     
     # Cache indicator
     if from_cache:
@@ -225,13 +228,19 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         cache.put(normalized, raw_data)
         cache.log_search(normalized, user_id, update.effective_user.username, from_cache=False)
 
-    # AUTO-SWITCH VOUCHER: If tokens are 0, move to next voucher in pool
-    if result.success and result.remaining_tokens == 0:
-        # Check if the voucher we just used was the user's active pool voucher
+    # TRACKING & AUTO-SWITCH: Update balance in pool
+    total_balance = None
+    if result.success:
+        # If using a user voucher, update its balance in the pool
         if active_user_voucher and active_key == active_user_voucher:
-            dynamic_config.remove_first_user_voucher(user_id)
-            logger.info(f"Voucher empty for user {user_id}, automatically removed and moved to next in pool.")
+            dynamic_config.update_voucher_balance(user_id, active_key, result.remaining_tokens)
+            total_balance = dynamic_config.get_total_balance(user_id)
+            
+            # If tokens are 0, move to next voucher in pool
+            if result.remaining_tokens == 0:
+                dynamic_config.remove_first_user_voucher(user_id)
+                logger.info(f"Voucher empty for user {user_id}, automatically removed.")
 
     # Robust multi-part message delivery
-    formatted_text = _format_result(result)
+    formatted_text = _format_result(result, total_balance=total_balance)
     await _send_long_message(update, formatted_text, status_msg)

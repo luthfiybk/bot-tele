@@ -13,11 +13,13 @@ async def set_my_voucher_command(update: Update, context: ContextTypes.DEFAULT_T
     if not context.args:
         vouchers = dynamic_config.get_user_vouchers(user_id)
         count = len(vouchers)
-        active = vouchers[0] if vouchers else 'Belum ada'
+        active = vouchers[0]["key"] if vouchers else 'Belum ada'
+        total = dynamic_config.get_total_balance(user_id)
         
         msg = (
             f"🎫 *Voucher Pool Anda*\n\n"
             f"• Jumlah Voucher: `{count}`\n"
+            f"• Total Token Pool: `{total}`\n"
             f"• Voucher Aktif: `{active}`\n\n"
             f"Gunakan: `/set_voucher <kode_baru>`\n"
             f"_Voucher baru akan ditambahkan ke antrian (akumulasi)._"
@@ -52,9 +54,13 @@ async def my_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         msg = f"🎫 *Antrian Voucher Anda ({len(vouchers)}):*\n\n"
         for i, v in enumerate(vouchers, 1):
             status = " (Aktif)" if i == 1 else ""
-            msg += f"{i}\\. `{escape_markdown(v)}`{status}\n"
+            key = escape_markdown(v["key"])
+            balance = v.get("balance", 0)
+            msg += f"{i}\\. `{key}` \\(Sisa: `{balance}`\\){status}\n"
         
-        msg += "\n_Bot akan otomatis pindah ke voucher berikutnya jika voucher aktif sudah habis._"
+        total = dynamic_config.get_total_balance(user_id)
+        msg += f"\n💰 *Total Saldo Pool:* `{total}`"
+        msg += "\n\n_Bot akan otomatis pindah ke voucher berikutnya jika voucher aktif sudah habis._"
         await update.message.reply_text(msg, parse_mode="MarkdownV2")
     else:
         await update.message.reply_text("❌ Anda belum memiliki voucher pribadi. Menggunakan voucher default bot.")
