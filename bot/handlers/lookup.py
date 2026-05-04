@@ -32,6 +32,9 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
     ]
 
     for source_res in result.sources:
+        if source_res.source.lower() == "whatsapp":
+            continue
+            
         source_name = source_res.source.upper()
         lines.append(f"\\=\\=\\=\\=\\= *{_escape_md(source_name)}* \\=\\=\\=\\=\\=")
         
