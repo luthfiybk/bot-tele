@@ -54,9 +54,10 @@ Bot akan mencari nomor tersebut di berbagai database:
 • Tidak semua nomor tersedia di database
 • Hasil bergantung pada data yang tersedia di tiap sumber
 
-*4\\. Perintah Admin \\(Khusus Admin\\)*
-• `/set_voucher <key>` \\- Memperbarui API Key tanpa restart bot
-• `/status` \\- Melihat sisa token dan statistik cache
+*4\\. Perintah Tambahan*
+• `/set_voucher <key>` \\- Gunakan voucher pribadi Anda
+• `/my_voucher` \\- Cek voucher yang sedang aktif
+• `/status` \\- Melihat statistik penggunaan bot
 """
 
 
@@ -121,8 +122,7 @@ async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         f"👤 *Info Anda:*\n\n"
         f"• User ID: `{uid}`\n"
         f"• Username: @{username}\n"
-        f"• Nama: {full_name}\n\n"
-        f"_Berikan User ID ini ke admin untuk ditambahkan ke whitelist_"
+        f"• Nama: {full_name}\n"
     )
     await update.message.reply_text(
         info,

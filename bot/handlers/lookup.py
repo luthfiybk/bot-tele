@@ -73,12 +73,13 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
             
         lines.append("") # Spacer between sources
 
-    # Token info
-    lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}`")
+    # Token info - Only show if NOT from cache to avoid confusion
+    if not from_cache:
+        lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}`")
     
     # Cache indicator
     if from_cache:
-        lines.append("💾 _Hasil dari cache_")
+        lines.append("💾 _Hasil diambil dari cache (Hemat Token)_")
 
     return "\n".join(lines)
 
