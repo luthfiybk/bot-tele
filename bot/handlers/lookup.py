@@ -79,7 +79,7 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
     
     # Cache indicator
     if from_cache:
-        lines.append("💾 _Hasil diambil dari cache (Hemat Token)_")
+        lines.append("💾 _Hasil diambil dari cache \\(Hemat Token\\)_")
 
     return "\n".join(lines)
 
@@ -146,7 +146,14 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
             # Re-parse the cached dict into the object
             result = dp_client._parse_multisource_response(normalized, cached_data)
             cache.log_search(normalized, user_id, update.effective_user.username, from_cache=True)
-            await update.message.reply_text(_format_result(result, from_cache=True), parse_mode="MarkdownV2")
+            
+            formatted_text = _format_result(result, from_cache=True)
+            try:
+                await update.message.reply_text(formatted_text, parse_mode="MarkdownV2")
+            except Exception as e:
+                logger.error(f"Cache MDv2 error: {e}")
+                plain_text = formatted_text.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
+                await update.message.reply_text(f"⚠️ (Format error, showing plain text)\n\n{plain_text}")
             return
         else:
             logger.info(f"❌ Cache MISS for: {normalized}")
