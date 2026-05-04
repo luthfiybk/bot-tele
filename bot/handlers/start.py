@@ -58,6 +58,8 @@ Bot akan mencari nomor tersebut di berbagai database:
 • `/set_voucher <key>` \\- Gunakan voucher pribadi Anda
 • `/my_voucher` \\- Cek voucher yang sedang aktif
 • `/status` \\- Melihat statistik penggunaan bot
+
+💳 *Top\\-up Voucher:* [data\\-publik\\.com/top\\-up](https://data-publik.com/top-up)
 """
 
 

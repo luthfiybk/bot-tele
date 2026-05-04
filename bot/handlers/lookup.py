@@ -66,9 +66,9 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False, total_
                 contacts = res_data.get("contacts", [])
                 if contacts:
                     lines.append(f"👥 *Kontak Terdeteksi:*")
-                    for i, c in enumerate(contacts, 1):
+                    for c in contacts:
                         c_name = c.get("name", "")
-                        lines.append(f"  {i}\\. {_escape_md(c_name)}")
+                        lines.append(f"  • {_escape_md(c_name)}")
                     has_data = True
         
         if not has_data:

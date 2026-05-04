@@ -67,7 +67,8 @@ async def my_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         total = dynamic_config.get_total_balance(user_id)
         msg += f"\n💰 *Total Saldo Pool:* `{total}`"
+        msg += "\n\n💳 *Beli Voucher:* [data\\-publik\\.com/top\\-up](https://data-publik.com/top-up)"
         msg += "\n\n_Bot akan otomatis pindah ke voucher berikutnya jika voucher aktif sudah habis\\._"
-        await update.message.reply_text(msg, parse_mode="MarkdownV2")
+        await update.message.reply_text(msg, parse_mode="MarkdownV2", disable_web_page_preview=True)
     else:
         await update.message.reply_text("❌ Anda belum memiliki voucher pribadi. Menggunakan voucher default bot.")
