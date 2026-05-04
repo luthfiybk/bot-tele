@@ -22,7 +22,7 @@ async def set_my_voucher_command(update: Update, context: ContextTypes.DEFAULT_T
             f"• Total Token Pool: `{total}`\n"
             f"• Voucher Aktif: `{active}`\n\n"
             f"Gunakan: `/set_voucher <kode_baru>`\n"
-            f"_Voucher baru akan ditambahkan ke antrian \\(akumulasi\\)._"
+            f"_Voucher baru akan ditambahkan ke antrian \\(akumulasi\\)\\._"
         )
         await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
         return
@@ -68,7 +68,7 @@ async def my_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         total = dynamic_config.get_total_balance(user_id)
         msg += f"\n💰 *Total Saldo Pool:* `{total}`"
-        msg += "\n\n_Bot akan otomatis pindah ke voucher berikutnya jika voucher aktif sudah habis._"
+        msg += "\n\n_Bot akan otomatis pindah ke voucher berikutnya jika voucher aktif sudah habis\\._"
         await update.message.reply_text(msg, parse_mode="MarkdownV2")
     else:
         await update.message.reply_text("❌ Anda belum memiliki voucher pribadi. Menggunakan voucher default bot.")
