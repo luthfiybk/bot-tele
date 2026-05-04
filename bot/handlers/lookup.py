@@ -120,16 +120,16 @@ async def _send_long_message(update: Update, text: str, status_msg: Update.messa
             await status_msg.edit_text(first_chunk, parse_mode="MarkdownV2")
         except Exception as e:
             logger.error(f"MDv2 Error in chunk 1: {e}")
-            # Fallback for Markdown error
+            # Fallback for Markdown error - SEND AS PLAIN TEXT
             plain = first_chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await status_msg.edit_text(f"⚠️ \\(Part 1 \\- Format error\\)\n\n{plain}", parse_mode="MarkdownV2")
+            await status_msg.edit_text(f"⚠️ (Part 1 - Format error)\n\n{plain}")
     else:
         try:
             await update.message.reply_text(first_chunk, parse_mode="MarkdownV2")
         except Exception as e:
             logger.error(f"MDv2 Error in chunk 1: {e}")
             plain = first_chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await update.message.reply_text(f"⚠️ \\(Part 1 \\- Format error\\)\n\n{plain}", parse_mode="MarkdownV2")
+            await update.message.reply_text(f"⚠️ (Part 1 - Format error)\n\n{plain}")
 
     # Send remaining chunks
     for i, chunk in enumerate(chunks[1:], 2):
@@ -138,7 +138,7 @@ async def _send_long_message(update: Update, text: str, status_msg: Update.messa
         except Exception as e:
             logger.error(f"MDv2 Error in chunk {i}: {e}")
             plain = chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await update.message.reply_text(f"⚠️ \\(Part {i} \\- Format error\\)\n\n{plain}", parse_mode="MarkdownV2")
+            await update.message.reply_text(f"⚠️ (Part {i} - Format error)\n\n{plain}")
 
 
 async def lookup_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
