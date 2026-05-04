@@ -22,7 +22,7 @@ async def set_my_voucher_command(update: Update, context: ContextTypes.DEFAULT_T
             f"• Total Token Pool: `{total}`\n"
             f"• Voucher Aktif: `{active}`\n\n"
             f"Gunakan: `/set_voucher <kode_baru>`\n"
-            f"_Voucher baru akan ditambahkan ke antrian (akumulasi)._"
+            f"_Voucher baru akan ditambahkan ke antrian \\(akumulasi\\)._"
         )
         await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
         return
@@ -35,7 +35,15 @@ async def set_my_voucher_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text("🗑️ Semua voucher Anda telah dihapus.")
         return
 
-    dynamic_config.add_user_voucher(user_id, new_voucher)
+    # Optional balance argument
+    initial_balance = 0
+    if len(context.args) > 1:
+        try:
+            initial_balance = int(context.args[1])
+        except ValueError:
+            pass
+
+    dynamic_config.add_user_voucher(user_id, new_voucher, initial_balance)
     
     vouchers = dynamic_config.get_user_vouchers(user_id)
     await update.message.reply_text(
@@ -51,9 +59,9 @@ async def my_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     vouchers = dynamic_config.get_user_vouchers(user_id)
     
     if vouchers:
-        msg = f"🎫 *Antrian Voucher Anda ({len(vouchers)}):*\n\n"
+        msg = f"🎫 *Antrian Voucher Anda \\({len(vouchers)}\\):*\n\n"
         for i, v in enumerate(vouchers, 1):
-            status = " (Aktif)" if i == 1 else ""
+            status = " \\(Aktif\\)" if i == 1 else ""
             key = escape_markdown(v["key"])
             balance = v.get("balance", 0)
             msg += f"{i}\\. `{key}` \\(Sisa: `{balance}`\\){status}\n"

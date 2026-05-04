@@ -68,7 +68,7 @@ class DynamicConfig:
         vouchers = self.get_user_vouchers(user_id)
         return vouchers[0]["key"] if vouchers else None
 
-    def add_user_voucher(self, user_id: int, value: str):
+    def add_user_voucher(self, user_id: int, value: str, initial_balance: int = 0):
         """Add a new voucher to the user's pool."""
         user_id_str = str(user_id)
         if "user_vouchers" not in self.data:
@@ -78,7 +78,7 @@ class DynamicConfig:
         
         # Prevent duplicates
         if not any(v["key"] == value for v in current_vouchers):
-            current_vouchers.append({"key": value, "balance": 0})
+            current_vouchers.append({"key": value, "balance": initial_balance})
             self.data["user_vouchers"][user_id_str] = current_vouchers
             self.save()
 

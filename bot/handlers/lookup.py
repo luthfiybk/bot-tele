@@ -78,7 +78,9 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False, total_
 
     # Token info - Only show if NOT from cache to avoid confusion
     if not from_cache:
-        if total_balance is not None and total_balance > result.remaining_tokens:
+        # Show total balance if provided and if user has a pool (more than 1 voucher)
+        # We check total_balance is not None and either it's higher than current or we know user has more vouchers
+        if total_balance is not None:
             lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}` \\(Total Pool: `{total_balance}`\\)")
         else:
             lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}`")
@@ -116,24 +118,27 @@ async def _send_long_message(update: Update, text: str, status_msg: Update.messa
     if status_msg:
         try:
             await status_msg.edit_text(first_chunk, parse_mode="MarkdownV2")
-        except Exception:
+        except Exception as e:
+            logger.error(f"MDv2 Error in chunk 1: {e}")
             # Fallback for Markdown error
             plain = first_chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await status_msg.edit_text(f"⚠️ (Part 1 - Format error)\n\n{plain}")
+            await status_msg.edit_text(f"⚠️ \\(Part 1 \\- Format error\\)\n\n{plain}", parse_mode="MarkdownV2")
     else:
         try:
             await update.message.reply_text(first_chunk, parse_mode="MarkdownV2")
-        except Exception:
+        except Exception as e:
+            logger.error(f"MDv2 Error in chunk 1: {e}")
             plain = first_chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await update.message.reply_text(f"⚠️ (Part 1 - Format error)\n\n{plain}")
+            await update.message.reply_text(f"⚠️ \\(Part 1 \\- Format error\\)\n\n{plain}", parse_mode="MarkdownV2")
 
     # Send remaining chunks
     for i, chunk in enumerate(chunks[1:], 2):
         try:
             await update.message.reply_text(f"*Lanjutan \\(Bagian {i}\\):*\n\n{chunk}", parse_mode="MarkdownV2")
-        except Exception:
+        except Exception as e:
+            logger.error(f"MDv2 Error in chunk {i}: {e}")
             plain = chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await update.message.reply_text(f"⚠️ (Part {i} - Format error)\n\n{plain}")
+            await update.message.reply_text(f"⚠️ \\(Part {i} \\- Format error\\)\n\n{plain}", parse_mode="MarkdownV2")
 
 
 async def lookup_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -185,19 +190,24 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         )
         return
 
+    active_user_voucher = dynamic_config.get_active_user_voucher(user_id)
+    
+    # --- Calculate Total Balance for display ---
+    total_balance = None
+    if active_user_voucher:
+        total_balance = dynamic_config.get_total_balance(user_id)
+
     # --- Check cache ---
     cache: SearchCache = context.bot_data.get("cache")
     if cache:
-        logger.info(f"🔎 Checking cache for: {normalized}")
         cached_data = cache.get(normalized)
         if cached_data:
-            logger.info(f"🎯 Cache HIT for: {normalized}")
-            dp_client: DataPublikClient = context.bot_data.get("dp_client")
+            logger.info(f"✅ Cache HIT for: {normalized}")
             # Re-parse the cached dict into the object
             result = dp_client._parse_multisource_response(normalized, cached_data)
             cache.log_search(normalized, user_id, update.effective_user.username, from_cache=True)
             
-            formatted_text = _format_result(result, from_cache=True)
+            formatted_text = _format_result(result, from_cache=True, total_balance=total_balance)
             await _send_long_message(update, formatted_text)
             return
         else:
@@ -229,11 +239,11 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         cache.log_search(normalized, user_id, update.effective_user.username, from_cache=False)
 
     # TRACKING & AUTO-SWITCH: Update balance in pool
-    total_balance = None
     if result.success:
         # If using a user voucher, update its balance in the pool
         if active_user_voucher and active_key == active_user_voucher:
             dynamic_config.update_voucher_balance(user_id, active_key, result.remaining_tokens)
+            # Recalculate total balance after update
             total_balance = dynamic_config.get_total_balance(user_id)
             
             # If tokens are 0, move to next voucher in pool
