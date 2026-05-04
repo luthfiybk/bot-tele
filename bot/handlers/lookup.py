@@ -56,10 +56,10 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False, total_
             # Source-specific data
             if source_res.source == "getcontact" and source_res.tags:
                 lines.append(f"🏷️ *Tag \\({source_res.tag_count} total\\):*")
-                for i, tag_obj in enumerate(source_res.tags, 1):
+                for tag_obj in source_res.tags:
                     tag_name = tag_obj.get("tag", "")
                     tag_count = tag_obj.get("count", 0)
-                    lines.append(f"  {i}\\. {_escape_md(tag_name)} \\({tag_count}\\)")
+                    lines.append(f"{_escape_md(tag_name)} \\({tag_count}\\)")
                 has_data = True
             
             elif source_res.source == "eyecon" and "contacts" in res_data:
