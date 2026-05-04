@@ -53,10 +53,15 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
             # Source-specific data
             if source_res.source == "getcontact" and source_res.tags:
                 lines.append(f"🏷️ *Tag \\({source_res.tag_count} total\\):*")
-                for i, tag_obj in enumerate(source_res.tags, 1):
+                # Limit to top 30 tags to prevent "Message too long" error
+                max_tags = 30
+                for i, tag_obj in enumerate(source_res.tags[:max_tags], 1):
                     tag_name = tag_obj.get("tag", "")
                     tag_count = tag_obj.get("count", 0)
                     lines.append(f"  {i}\\. {_escape_md(tag_name)} \\({tag_count}\\)")
+                
+                if len(source_res.tags) > max_tags:
+                    lines.append(f"  _...dan {len(source_res.tags) - max_tags} tag lainnya_")
                 has_data = True
             
             elif source_res.source == "eyecon" and "contacts" in res_data:
@@ -81,7 +86,13 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
     if from_cache:
         lines.append("💾 _Hasil diambil dari cache \\(Hemat Token\\)_")
 
-    return "\n".join(lines)
+    full_message = "\n".join(lines)
+    
+    # Final safety check: Telegram limit is 4096. We truncate at 4000.
+    if len(full_message) > 4000:
+        full_message = full_message[:3900] + "\n\n_...pencarian terlalu panjang, teks dipotong_"
+        
+    return full_message
 
 
 
