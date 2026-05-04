@@ -85,7 +85,7 @@ class DataPublikClient:
                 message="Network or parsing error", 
                 phone_number=phone_number,
                 error=str(e)
-            )
+            ), {}
 
     def _parse_multisource_response(self, phone: str, data: dict) -> MultiSourceResponse:
         """Parse the raw API response into MultiSourceResponse object."""
