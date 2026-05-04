@@ -212,9 +212,9 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         return
 
     # DYNAMIC KEY INJECTION:
-    # Priority: Override (JSON) > User specific > Global Dynamic > Default Hardcoded
-    user_voucher = dynamic_config.get_user_voucher(user_id)
-    active_key = override_key or user_voucher or dynamic_config.get_voucher() or dp_client.default_key
+    # Priority: Override (JSON) > User specific pool > Global Dynamic > Default Hardcoded
+    active_user_voucher = dynamic_config.get_active_user_voucher(user_id)
+    active_key = override_key or active_user_voucher or dynamic_config.get_voucher() or dp_client.default_key
     
     # Perform search
     # We need to get the raw data to store in cache
@@ -224,6 +224,13 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
     if cache and result.success:
         cache.put(normalized, raw_data)
         cache.log_search(normalized, user_id, update.effective_user.username, from_cache=False)
+
+    # AUTO-SWITCH VOUCHER: If tokens are 0, move to next voucher in pool
+    if result.success and result.remaining_tokens == 0:
+        # Check if the voucher we just used was the user's active pool voucher
+        if active_user_voucher and active_key == active_user_voucher:
+            dynamic_config.remove_first_user_voucher(user_id)
+            logger.info(f"Voucher empty for user {user_id}, automatically removed and moved to next in pool.")
 
     # Robust multi-part message delivery
     formatted_text = _format_result(result)

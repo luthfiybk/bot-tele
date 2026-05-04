@@ -6,38 +6,55 @@ from bot.services.utils import escape_markdown
 logger = logging.getLogger(__name__)
 
 async def set_my_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Command for a user to set their own personal voucher."""
+    """Command for a user to add a voucher to their personal pool."""
     user_id = update.effective_user.id
+    dynamic_config = context.bot_data.get("dynamic_config")
     
     if not context.args:
-        dynamic_config = context.bot_data.get("dynamic_config")
-        current_voucher = dynamic_config.get_user_voucher(user_id)
+        vouchers = dynamic_config.get_user_vouchers(user_id)
+        count = len(vouchers)
+        active = vouchers[0] if vouchers else 'Belum ada'
         
         msg = (
-            f"ℹ️ *Voucher Pribadi Anda*\n\n"
-            f"Voucher saat ini: `{current_voucher or 'Belum diatur'}`\n\n"
+            f"🎫 *Voucher Pool Anda*\n\n"
+            f"• Jumlah Voucher: `{count}`\n"
+            f"• Voucher Aktif: `{active}`\n\n"
             f"Gunakan: `/set_voucher <kode_baru>`\n"
-            f"_Voucher ini akan digunakan khusus untuk pencarian Anda._"
+            f"_Voucher baru akan ditambahkan ke antrian (akumulasi)._"
         )
         await update.message.reply_text(escape_markdown(msg), parse_mode="MarkdownV2")
         return
 
-    new_voucher = context.args[0]
-    dynamic_config = context.bot_data.get("dynamic_config")
-    dynamic_config.set_user_voucher(user_id, new_voucher)
+    new_voucher = context.args[0].strip()
     
+    # Check for "clear" command
+    if new_voucher.lower() == "clear":
+        dynamic_config.clear_user_vouchers(user_id)
+        await update.message.reply_text("🗑️ Semua voucher Anda telah dihapus.")
+        return
+
+    dynamic_config.add_user_voucher(user_id, new_voucher)
+    
+    vouchers = dynamic_config.get_user_vouchers(user_id)
     await update.message.reply_text(
-        f"✅ Voucher pribadi berhasil diperbarui menjadi: `{escape_markdown(new_voucher)}`", 
+        f"✅ Voucher berhasil ditambahkan\\!\n"
+        f"Sekarang Anda memiliki `{len(vouchers)}` voucher dalam antrian\\.", 
         parse_mode="MarkdownV2"
     )
 
 async def my_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Check current user voucher."""
+    """Check current user voucher pool."""
     user_id = update.effective_user.id
     dynamic_config = context.bot_data.get("dynamic_config")
-    voucher = dynamic_config.get_user_voucher(user_id)
+    vouchers = dynamic_config.get_user_vouchers(user_id)
     
-    if voucher:
-        await update.message.reply_text(f"🎫 Voucher Anda: `{escape_markdown(voucher)}`", parse_mode="MarkdownV2")
+    if vouchers:
+        msg = f"🎫 *Antrian Voucher Anda ({len(vouchers)}):*\n\n"
+        for i, v in enumerate(vouchers, 1):
+            status = " (Aktif)" if i == 1 else ""
+            msg += f"{i}\\. `{escape_markdown(v)}`{status}\n"
+        
+        msg += "\n_Bot akan otomatis pindah ke voucher berikutnya jika voucher aktif sudah habis._"
+        await update.message.reply_text(msg, parse_mode="MarkdownV2")
     else:
-        await update.message.reply_text("❌ Anda belum mengatur voucher pribadi. Menggunakan voucher default bot.")
+        await update.message.reply_text("❌ Anda belum memiliki voucher pribadi. Menggunakan voucher default bot.")
