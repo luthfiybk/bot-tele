@@ -199,6 +199,8 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
 
     # --- Check cache ---
     cache: SearchCache = context.bot_data.get("cache")
+    dp_client: DataPublikClient = context.bot_data.get("dp_client")
+    
     if cache:
         cached_data = cache.get(normalized)
         if cached_data:
