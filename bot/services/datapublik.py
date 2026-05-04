@@ -33,6 +33,20 @@ class DataPublikClient:
     def __init__(self, base_url: str, default_key: str):
         self.base_url = base_url.rstrip("/")
         self.default_key = default_key
+        self._session: Optional[aiohttp.ClientSession] = None
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Lazy initialization of the aiohttp session."""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=60)
+            )
+        return self._session
+
+    async def close(self):
+        """Close the session."""
+        if self._session and not self._session.closed:
+            await self._session.close()
 
     async def search_multisource(self, phone_number: str, key: Optional[str] = None) -> tuple[MultiSourceResponse, dict]:
         """
@@ -50,8 +64,8 @@ class DataPublikClient:
         }
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+            session = await self._get_session()
+            async with session.post(url, json=payload) as resp:
                     if resp.status != 200:
                         error_text = await resp.text()
                         return MultiSourceResponse(

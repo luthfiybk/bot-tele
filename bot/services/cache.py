@@ -141,7 +141,7 @@ class SearchCache:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cached_count = conn.execute(
-                    "SELECT COUNT(*) FROM search_cache"
+                    "SELECT COUNT(*) FROM search_cache_v2"
                 ).fetchone()[0]
                 total_searches = conn.execute(
                     "SELECT COUNT(*) FROM search_log"

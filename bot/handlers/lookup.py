@@ -10,6 +10,7 @@ from telegram.ext import ContextTypes
 from bot.services.phone_utils import normalize_phone, format_display_number
 from bot.services.datapublik import DataPublikClient, MultiSourceResponse, SourceResult
 from bot.services.cache import SearchCache
+from bot.services.utils import escape_markdown as _escape_md
 
 logger = logging.getLogger(__name__)
 
@@ -82,18 +83,6 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
     return "\n".join(lines)
 
 
-def _escape_md(text: str) -> str:
-    """Escape special characters for MarkdownV2."""
-    if not text:
-        return ""
-    special_chars = r"_*[]()~`>#+-=|{}.!\\"
-    escaped = ""
-    for char in text:
-        if char in special_chars:
-            escaped += f"\\{char}"
-        else:
-            escaped += char
-    return escaped
 
 
 async def lookup_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -173,7 +162,9 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         return
 
     # DYNAMIC KEY INJECTION:
-    active_key = override_key or dynamic_config.get_voucher() or dp_client.default_key
+    # Priority: Override (JSON) > User specific > Global Dynamic > Default Hardcoded
+    user_voucher = dynamic_config.get_user_voucher(user_id)
+    active_key = override_key or user_voucher or dynamic_config.get_voucher() or dp_client.default_key
     
     # Perform search
     # We need to get the raw data to store in cache
@@ -184,4 +175,17 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         cache.put(normalized, raw_data)
         cache.log_search(normalized, user_id, update.effective_user.username, from_cache=False)
 
-    await status_msg.edit_text(_format_result(result), parse_mode="MarkdownV2")
+    # Robust message delivery
+    formatted_text = _format_result(result)
+    try:
+        await status_msg.edit_text(formatted_text, parse_mode="MarkdownV2")
+    except Exception as e:
+        logger.error(f"Failed to send MarkdownV2 message: {e}. Falling back to plain text.")
+        # Fallback: Try to send as plain text if Markdown fails
+        try:
+            # Strip some common MDv2 tags to make it readable in plain text
+            plain_text = formatted_text.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
+            await status_msg.edit_text(f"⚠️ (Format error, showing plain text)\n\n{plain_text}")
+        except Exception as e2:
+            logger.error(f"Fatal message delivery error: {e2}")
+            await status_msg.edit_text("❌ Terjadi kesalahan saat menampilkan hasil.")

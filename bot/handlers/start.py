@@ -5,6 +5,11 @@ Handler untuk command /start, /help, dan /status
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from bot.services.utils import escape_markdown
+
+def clean(text: any) -> str:
+    return escape_markdown(str(text))
+
 
 WELCOME_MESSAGE = """
 🔍 *Multi\\-Source OSINT Bot*
@@ -91,26 +96,35 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         lines.append(f"• Cache: ✅ Aktif")
         lines.append("")
         lines.append("📈 *Statistik:*")
-        lines.append(f"  • Nomor di\\-cache: {stats.get('cached_numbers', 0)}")
-        lines.append(f"  • Total pencarian: {stats.get('total_searches', 0)}")
-        lines.append(f"  • Cache hits: {stats.get('cache_hits', 0)}")
-        lines.append(f"  • API calls: {stats.get('cache_miss', 0)}")
+        lines.append(f"  • Nomor di\\-cache: {clean(stats.get('cached_numbers', 0))}")
+        lines.append(f"  • Total pencarian: {clean(stats.get('total_searches', 0))}")
+        lines.append(f"  • Cache hits: {clean(stats.get('cache_hits', 0))}")
+        lines.append(f"  • API calls: {clean(stats.get('cache_miss', 0))}")
     else:
         lines.append(f"• Cache: ❌ Tidak aktif")
 
     await update.message.reply_text(
-        "\n".join(lines).replace("-", "\\-"), parse_mode="MarkdownV2"
+        "\n".join(lines), parse_mode="MarkdownV2"
     )
 
 
 async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /myid command - show user's Telegram ID for whitelist setup."""
     user = update.effective_user
-    await update.message.reply_text(
+    
+    # Escape dynamic values
+    uid = clean(user.id)
+    username = clean(user.username or 'tidak ada')
+    full_name = clean(user.full_name)
+
+    info = (
         f"👤 *Info Anda:*\n\n"
-        f"• User ID: `{user.id}`\n"
-        f"• Username: @{user.username or 'tidak ada'}\n"
-        f"• Nama: {user.full_name}\n\n"
-        f"_Berikan User ID ini ke admin untuk ditambahkan ke whitelist_",
+        f"• User ID: `{uid}`\n"
+        f"• Username: @{username}\n"
+        f"• Nama: {full_name}\n\n"
+        f"_Berikan User ID ini ke admin untuk ditambahkan ke whitelist_"
+    )
+    await update.message.reply_text(
+        info,
         parse_mode="MarkdownV2",
     )

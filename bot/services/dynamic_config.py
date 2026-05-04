@@ -21,10 +21,13 @@ class DynamicConfig:
         if os.path.exists(self.file_path):
             try:
                 with open(self.file_path, 'r') as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    if "user_vouchers" not in data:
+                        data["user_vouchers"] = {}
+                    return data
             except Exception as e:
                 logger.error(f"Error loading dynamic config: {e}")
-        return {"voucher": ""}
+        return {"voucher": "", "user_vouchers": {}}
 
     def save(self):
         try:
@@ -38,4 +41,16 @@ class DynamicConfig:
 
     def set_voucher(self, value: str):
         self.data["voucher"] = value
+        self.save()
+
+    def get_user_voucher(self, user_id: int) -> str | None:
+        """Get voucher for a specific user ID."""
+        user_id_str = str(user_id)
+        return self.data.get("user_vouchers", {}).get(user_id_str)
+
+    def set_user_voucher(self, user_id: int, value: str):
+        """Set voucher for a specific user ID."""
+        if "user_vouchers" not in self.data:
+            self.data["user_vouchers"] = {}
+        self.data["user_vouchers"][str(user_id)] = value
         self.save()

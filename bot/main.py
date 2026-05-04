@@ -13,7 +13,8 @@ from telegram.ext import (
 from bot.config import load_config
 from bot.handlers.start import start_command, help_command, status_command, myid_command
 from bot.handlers.lookup import lookup_handler
-from bot.handlers.admin import set_voucher_command
+from bot.handlers.admin import set_global_voucher_command
+from bot.handlers.user import set_my_voucher_command, my_voucher_command
 from bot.services.datapublik import DataPublikClient
 from bot.services.cache import SearchCache
 from bot.services.dynamic_config import DynamicConfig
@@ -67,7 +68,9 @@ def main() -> None:
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("status", status_command))
     app.add_handler(CommandHandler("myid", myid_command))
-    app.add_handler(CommandHandler("set_voucher", set_voucher_command))
+    app.add_handler(CommandHandler("set_voucher", set_my_voucher_command))
+    app.add_handler(CommandHandler("my_voucher", my_voucher_command))
+    app.add_handler(CommandHandler("set_global_voucher", set_global_voucher_command))
 
     # Register message handler for phone number lookups
     app.add_handler(

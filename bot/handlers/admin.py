@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 # List of admin IDs (you can move this to .env later)
 ADMIN_IDS = [12345678, 87654321] # Ganti dengan ID telegram Anda
 
-async def set_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Command to update the global voucher value."""
+async def set_global_voucher_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Command to update the global voucher value (Admin only)."""
     user_id = update.effective_user.id
     
     # Check if user is admin (optional, depends on security needs)
