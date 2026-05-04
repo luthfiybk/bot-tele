@@ -56,15 +56,10 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
             # Source-specific data
             if source_res.source == "getcontact" and source_res.tags:
                 lines.append(f"🏷️ *Tag \\({source_res.tag_count} total\\):*")
-                # Limit to top 30 tags to prevent "Message too long" error
-                max_tags = 30
-                for i, tag_obj in enumerate(source_res.tags[:max_tags], 1):
+                for i, tag_obj in enumerate(source_res.tags, 1):
                     tag_name = tag_obj.get("tag", "")
                     tag_count = tag_obj.get("count", 0)
                     lines.append(f"  {i}\\. {_escape_md(tag_name)} \\({tag_count}\\)")
-                
-                if len(source_res.tags) > max_tags:
-                    lines.append(f"  _...dan {len(source_res.tags) - max_tags} tag lainnya_")
                 has_data = True
             
             elif source_res.source == "eyecon" and "contacts" in res_data:
@@ -89,15 +84,53 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False) -> str
     if from_cache:
         lines.append("💾 _Hasil diambil dari cache \\(Hemat Token\\)_")
 
-    full_message = "\n".join(lines)
+    return "\n".join(lines)
+
+
+
+
+async def _send_long_message(update: Update, text: str, status_msg: Update.message = None) -> None:
+    """Split and send long messages to avoid Telegram limit."""
+    # Split into chunks of ~4000 chars, preferably at newline
+    max_len = 4000
+    chunks = []
     
-    # Final safety check: Telegram limit is 4096. We truncate at 4000.
-    if len(full_message) > 4000:
-        full_message = full_message[:3900] + "\n\n_...pencarian terlalu panjang, teks dipotong_"
-        
-    return full_message
+    while len(text) > 0:
+        if len(text) <= max_len:
+            chunks.append(text)
+            break
+            
+        # Find best place to split (newline)
+        split_at = text.rfind("\n", 0, max_len)
+        if split_at == -1: # No newline found, just cut at max_len
+            split_at = max_len
+            
+        chunks.append(text[:split_at])
+        text = text[split_at:].lstrip()
 
+    # Send first chunk
+    first_chunk = chunks[0]
+    if status_msg:
+        try:
+            await status_msg.edit_text(first_chunk, parse_mode="MarkdownV2")
+        except Exception:
+            # Fallback for Markdown error
+            plain = first_chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
+            await status_msg.edit_text(f"⚠️ (Part 1 - Format error)\n\n{plain}")
+    else:
+        try:
+            await update.message.reply_text(first_chunk, parse_mode="MarkdownV2")
+        except Exception:
+            plain = first_chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
+            await update.message.reply_text(f"⚠️ (Part 1 - Format error)\n\n{plain}")
 
+    # Send remaining chunks
+    for i, chunk in enumerate(chunks[1:], 2):
+        try:
+            await update.message.reply_text(f"*Lanjutan \\(Bagian {i}\\):*\n\n{chunk}", parse_mode="MarkdownV2")
+        except Exception:
+            plain = chunk.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
+            await update.message.reply_text(f"⚠️ (Part {i} - Format error)\n\n{plain}")
 
 
 async def lookup_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -162,12 +195,7 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
             cache.log_search(normalized, user_id, update.effective_user.username, from_cache=True)
             
             formatted_text = _format_result(result, from_cache=True)
-            try:
-                await update.message.reply_text(formatted_text, parse_mode="MarkdownV2")
-            except Exception as e:
-                logger.error(f"Cache MDv2 error: {e}")
-                plain_text = formatted_text.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-                await update.message.reply_text(f"⚠️ (Format error, showing plain text)\n\n{plain_text}")
+            await _send_long_message(update, formatted_text)
             return
         else:
             logger.info(f"❌ Cache MISS for: {normalized}")
@@ -197,17 +225,6 @@ async def _handle_phone_lookup(raw_phone: str, update: Update, context: ContextT
         cache.put(normalized, raw_data)
         cache.log_search(normalized, user_id, update.effective_user.username, from_cache=False)
 
-    # Robust message delivery
+    # Robust multi-part message delivery
     formatted_text = _format_result(result)
-    try:
-        await status_msg.edit_text(formatted_text, parse_mode="MarkdownV2")
-    except Exception as e:
-        logger.error(f"Failed to send MarkdownV2 message: {e}. Falling back to plain text.")
-        # Fallback: Try to send as plain text if Markdown fails
-        try:
-            # Strip some common MDv2 tags to make it readable in plain text
-            plain_text = formatted_text.replace("\\", "").replace("*", "").replace("_", "").replace("`", "")
-            await status_msg.edit_text(f"⚠️ (Format error, showing plain text)\n\n{plain_text}")
-        except Exception as e2:
-            logger.error(f"Fatal message delivery error: {e2}")
-            await status_msg.edit_text("❌ Terjadi kesalahan saat menampilkan hasil.")
+    await _send_long_message(update, formatted_text, status_msg)
