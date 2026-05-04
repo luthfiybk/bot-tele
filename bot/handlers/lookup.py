@@ -81,7 +81,7 @@ def _format_result(result: MultiSourceResponse, from_cache: bool = False, total_
         # Show total balance if provided and if user has a pool (more than 1 voucher)
         # We check total_balance is not None and either it's higher than current or we know user has more vouchers
         if total_balance is not None:
-            lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}` \\(Total Pool: `{total_balance}`\\)")
+            lines.append(f"🪙 *Sisa Token:* `{total_balance}`")
         else:
             lines.append(f"🪙 *Sisa Token:* `{result.remaining_tokens}`")
     

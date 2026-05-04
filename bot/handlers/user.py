@@ -47,9 +47,7 @@ async def set_my_voucher_command(update: Update, context: ContextTypes.DEFAULT_T
     
     vouchers = dynamic_config.get_user_vouchers(user_id)
     await update.message.reply_text(
-        f"✅ Voucher berhasil ditambahkan\\!\n"
-        f"Voucher ini akan digunakan pada pencarian Anda **berikutnya** untuk mengecek saldo, "
-        f"lalu akan dipindahkan ke urutan terakhir antrian\\.", 
+        f"✅ Voucher berhasil ditambahkan\\!\n", 
         parse_mode="MarkdownV2"
     )
 
