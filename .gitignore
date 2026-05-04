@@ -3,6 +3,7 @@
 
 # SQLite cache
 cache.db
+bot/data/
 
 # Python
 __pycache__/
